@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 import AgentAPI from "apminsight";
 AgentAPI.config();
 
@@ -10,9 +12,37 @@ import { commentaryRouter } from "./routes/commentary.js";
 
 const PORT = Number(process.env.PORT) || 8000;
 const HOST = process.env.HOST || "0.0.0.0";
+const allowedOrigins = new Set(
+  (process.env.CORS_ALLOWED_ORIGINS ||
+    "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+);
 
 const app = express();
 const server = http.createServer(app);
+
+app.use((req, res, next) => {
+  const requestOrigin = req.headers.origin;
+
+  if (!requestOrigin) {
+    return next();
+  }
+
+  if (allowedOrigins.has(requestOrigin)) {
+    res.setHeader("Access-Control-Allow-Origin", requestOrigin);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  }
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  next();
+});
 
 app.use(express.json());
 app.use(securityMiddleware());
